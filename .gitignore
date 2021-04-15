@@ -136,3 +136,6 @@ _opam
 .vscode
 
 .DS_Store
+
+.merlin
+make_project.sh
