@@ -740,6 +740,7 @@ let rec sexpr_of_pred (asn : asn) : sexpression =
     | CoefAsn (_, pat, _) ->
       build_list [ Symbol "pred-coef-asn" ]
                  [ "expr", sexpr_of_pat pat]
+    | x -> List [ Symbol "pred"; sexpr_of_expr asn ]
 
 let rec sexpr_of_stmt (stmt : stmt) : sexpression =
   match stmt with
