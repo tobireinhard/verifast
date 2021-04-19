@@ -11,6 +11,7 @@ open Verifast0
 open Verifast1
 open Assertions
 open Verify_expr
+open Unrolling
 
 exception FileNotFound of string
 
@@ -3087,7 +3088,12 @@ module VerifyProgram(VerifyProgramArgs: VERIFY_PROGRAM_ARGS) = struct
           if Filename.check_suffix path ".h" then
             parse_header_file path reportRange reportShouldFail options.option_verbose [] options.option_define_macros options.option_enforce_annotations data_model
           else
-            parse_c_file path reportRange reportShouldFail options.option_verbose options.option_include_paths options.option_define_macros options.option_enforce_annotations data_model
+            let (headersPlain, dsPlain) = 
+              parse_c_file path reportRange reportShouldFail options.option_verbose options.option_include_paths options.option_define_macros options.option_enforce_annotations data_model
+            in 
+            let dsUnrolled = unroll_loops_in_package_list Unrolling.maxDepth dsPlain
+            in
+            (headersPlain, dsUnrolled)
     in
     emitter_callback ds;
     check_should_fail ([], [], [], [], [], []) $. fun () ->

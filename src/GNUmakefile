@@ -206,7 +206,7 @@ endif
 
 # Always include debug information. This seems necessary to prevent vfide crashes on OS X (see https://dnetcode.cs.kuleuven.be/issues/1975).
 # Also, this is necessary to get stack traces.
-OCAMLCFLAGS += -g -w p
+OCAMLCFLAGS += -g -w P
 ifeq ($(OS), Linux)
   # See https://github.com/verifast/verifast/issues/145
   OCAMLCFLAGS += -runtime-variant _pic
@@ -412,7 +412,7 @@ else ifeq ($(OS), Linux)
   OCAMLOPT_LINKFLAGS += -cclib -Wl,-rpath='$$ORIGIN'
 endif
 
-../bin/vfide$(DOTEXE): vfide.cmx $(VERIFAST_PLUGINS:%=verifastPlugin%.cmx) $(Z3DEPS) $(GTKSOURCEVIEW_DEPS) 
+../bin/vfide$(DOTEXE): vfide.cmx $(VERIFAST_PLUGINS:%=verifastPlugin%.cmx) $(Z3DEPS) $(GTKSOURCEVIEW_DEPS)
 	@echo "  OCAMLOPT " $@
 ifndef WITHOUT_GTKSOURCEVIEW
 	cd linemarks; make linemarks.cmxa
@@ -420,6 +420,7 @@ endif
 	$(SET_LDD); $(COMPILE) $(OCAMLOPT_LINKFLAGS) -warn-error F -pp ${CAMLP4O} -o ../bin/vfide$(DOTEXE)	\
 	  $(LABLGTK_FLAGS) $(GTKSOURCEVIEW_LFLAGS) \
 	  $(INCLUDES) Perf.cmxa proverapi.cmx dynlink.cmxa \
+		unrolling.cmx \
 	  util.cmx ast.cmx stats.cmx lexer.cmx \
 	  parser.cmx ${JAVA_FE_INCLS} verifast0.cmx verifast1.cmx assertions.cmx \
 	  verify_expr.cmx verifast.cmx combineprovers.cmx \
@@ -444,12 +445,14 @@ vfide: ../bin/vfide$(DOTEXE) $(STDLIB)
 	@echo "  OCAMLOPT " $@
 	$(COMPILE) $(OCAMLOPT_LINKFLAGS) -warn-error F -pp ${CAMLP4O} -o ../bin/verifast$(DOTEXE) \
 	$(INCLUDES) Perf.cmxa proverapi.cmx \
+		unrolling.cmx \
 	  util.cmx ast.cmx stats.cmx lexer.cmx parser.cmx \
 	  ${JAVA_FE_INCLS} verifast0.cmx verifast1.cmx assertions.cmx \
 	  verify_expr.cmx verifast.cmx simplex.cmx redux.cmx combineprovers.cmx \
           smtlib.cmx smtlibprover.cmx verifastPluginCvc4.cmx verifastPluginExternalZ3.cmx verifastPluginReduxSmtlib.cmx \
           $(Z3ARGS_EARLY) \
 	  verifastPluginRedux.cmx $(Z3ARGS) json.cmx vfconsole.cmx
+
 ifeq ($(OS), Darwin)
 	install_name_tool -change libz3.dylib @executable_path/../lib/libz3.dylib ../bin/verifast
 endif
@@ -458,6 +461,7 @@ endif
 	@echo "  OCAMLOPT " $@
 	$(COMPILE) $(OCAMLOPT_LINKFLAGS) -warn-error F -pp ${CAMLP4O} -o ../bin/explorer$(DOTEXE) \
 	$(INCLUDES) Perf.cmxa proverapi.cmx \
+		unrolling.cmx \
 	  util.cmx ast.cmx stats.cmx lexer.cmx parser.cmx \
 	  ${JAVA_FE_INCLS} verifast0.cmx verifast1.cmx assertions.cmx \
 	  verify_expr.cmx verifast.cmx simplex.cmx redux.cmx combineprovers.cmx \
