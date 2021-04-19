@@ -1,0 +1,52 @@
+(declare-package
+   ||
+   :imports ()
+   :declarations (declarations
+                    (declare-function
+                       dummyLoop
+                       :kind regular
+                       :type-parameters ()
+                       :return-type (type-expr-manifest (type-int))
+                       :parameters ()
+                       :body ((stmt-declaration :locals ((local i :init (expr-int 0))))
+                                (stmt-if
+                                   (expr-op < :operands ((expr-var i) (expr-int 10)))
+                                   (begin
+                                      (stmt-begin () ((stmt-expression (expr-assign (expr-var i) (expr-op + :operands ((expr-var i) (expr-int 1)))))))
+                                      (stmt-if
+                                         (expr-op < :operands ((expr-var i) (expr-int 10)))
+                                         (begin
+                                            (stmt-begin () ((stmt-expression (expr-assign (expr-var i) (expr-op + :operands ((expr-var i) (expr-int 1)))))))
+                                            (stmt-if
+                                               (expr-op < :operands ((expr-var i) (expr-int 10)))
+                                               (begin
+                                                  (stmt-begin
+                                                     () ((stmt-expression (expr-assign (expr-var i) (expr-op + :operands ((expr-var i) (expr-int 1)))))))
+                                                  (stmt-if
+                                                     (expr-op < :operands ((expr-var i) (expr-int 10)))
+                                                     (begin
+                                                        (stmt-begin
+                                                           () ((stmt-expression (expr-assign (expr-var i) (expr-op + :operands ((expr-var i) (expr-int 1)))))))
+                                                        (stmt-if
+                                                           (expr-op < :operands ((expr-var i) (expr-int 10)))
+                                                           (begin
+                                                              (stmt-begin
+                                                                 ()
+                                                                 ((stmt-expression (expr-assign (expr-var i) (expr-op + :operands ((expr-var i) (expr-int 1)))))))
+                                                              (stmt-while
+                                                                 :condition (expr-op < :operands ((expr-var i) (expr-int 10)))
+                                                                 :invariant (loop-invariant
+                                                                    (pred-&*&
+                                                                    (pred (expr-op <= :operands ((expr-int 0) (expr-var i))))
+                                                                    (pred (expr-op <= :operands ((expr-var i) (expr-int 3))))))
+                                                                 :unknown nil
+                                                                 :body ((stmt-begin
+                                                                    ()
+                                                                    ((stmt-expression
+                                                                    (expr-assign (expr-var i) (expr-op + :operands ((expr-var i) (expr-int 1))))))))
+                                                                 :final-ss ())) 
+                                                           (begin))) 
+                                                     (begin))) (begin))) 
+                                         (begin))) (begin)) (stmt-return :value (expr-var i)))
+                       :precondition (true)
+                       :postcondition (pred (expr-op = :operands ((expr-var result) (expr-int 3)))))))
