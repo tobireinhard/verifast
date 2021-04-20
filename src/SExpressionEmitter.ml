@@ -880,6 +880,7 @@ and sexpr_of_decl (decl : decl) : sexpression =
             impl,
             contract,
             terminates,
+            unroll,
             body,
             binding,
             visibility) ->

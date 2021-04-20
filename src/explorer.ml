@@ -120,7 +120,7 @@ let _ =
       | [] -> []
       | head :: tail -> 
         match head with
-          | Func(loc, _, _, _, name, _, _, _, contract_opt, _, _, _, _) -> 
+          | Func(loc, _, _, _, name, _, _, _, contract_opt, _, _, _, _, _) -> 
             begin 
               match contract_opt with
                 | None -> parse_decl_list tail
@@ -148,7 +148,7 @@ let _ =
                   | decl_head :: _ -> 
                     begin
                       match decl_head with
-                        | Func(_, _, _, _, _, _, _, _, contract_opt, _, _, _, _) -> 
+                        | Func(_, _, _, _, _, _, _, _, contract_opt, _, _, _, _, _) -> 
                           begin 
                             match contract_opt with
                               | Some contract -> 

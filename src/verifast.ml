@@ -2022,7 +2022,7 @@ module VerifyProgram(VerifyProgramArgs: VERIFY_PROGRAM_ARGS) = struct
                 if List.mem_assoc (p, i) predinsts then static_error l "Duplicate predicate family instance." None;
                 (lems, ((p, i), (l, predinst_tparams, xs, body))::predinsts, localpreds, localpredinsts)
               end
-            | Func (l, Lemma(auto, trigger), tparams, rt, fn, xs, nonghost_callers_only, functype_opt, contract_opt, terminates, Some body, Static, Public) ->
+            | Func (l, Lemma(auto, trigger), tparams, rt, fn, xs, nonghost_callers_only, functype_opt, contract_opt, terminates, unroll, Some body, Static, Public) ->
               if List.mem_assoc fn funcmap || List.mem_assoc fn lems then static_error l "Duplicate function name." None;
               if List.mem_assoc fn tenv then static_error l "Local lemma name hides existing local variable name." None;
               let fterm = get_unique_var_symb fn (PtrType Void) in
@@ -2852,7 +2852,7 @@ module VerifyProgram(VerifyProgramArgs: VERIFY_PROGRAM_ARGS) = struct
   let rec verify_funcs (pn,ilist)  boxes gs lems ds =
     match ds with
      [] -> (boxes, gs, lems)
-    | Func (l, Lemma(auto, trigger), _, rt, g, ps, _, _, _, _, None, _, _)::ds -> 
+    | Func (l, Lemma(auto, trigger), _, rt, g, ps, _, _, _, _, _, None, _, _)::ds -> 
       let g = full_name pn g in
       let ((g_file_name, _, _), _) = root_caller_token l in
       if language = Java && not (Filename.check_suffix g_file_name ".javaspec") then
@@ -2869,7 +2869,7 @@ module VerifyProgram(VerifyProgramArgs: VERIFY_PROGRAM_ARGS) = struct
           lems    (* Prototype for lemma implemented in current file; will not generate .requires directive; calls must be subjected to termination check. *)
       in
       verify_funcs (pn,ilist) boxes gs lems ds
-    | Func (l, Regular, _, rt, g, ps, _, _, _, _, None, _, _)::ds ->
+    | Func (l, Regular, _, rt, g, ps, _, _, _, _, _, None, _, _)::ds ->
       let g = full_name pn g in
       let FuncInfo ([], fterm, _, k, tparams', rt, ps, nonghost_callers_only, pre, pre_tenv, post, terminates, functype_opt, body, fb,v) = List.assoc g funcmap in
       let gs =
@@ -2879,7 +2879,7 @@ module VerifyProgram(VerifyProgramArgs: VERIFY_PROGRAM_ARGS) = struct
           gs
       in
       verify_funcs (pn,ilist) boxes gs lems ds
-    | Func (l, k, _, _, g, _, _, functype_opt, _, _, Some _, _, _)::ds when k <> Fixpoint ->
+    | Func (l, k, _, _, g, _, _, functype_opt, _, _, _, Some _, _, _)::ds when k <> Fixpoint ->
       let g = full_name pn g in
       let gs', lems' =
       record_fun_timing l g begin fun () ->

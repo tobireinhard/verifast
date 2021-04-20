@@ -233,6 +233,11 @@ type
 
 type int_literal_lsuffix = NoLSuffix | LSuffix | LLSuffix
 
+(** Unroll instructions **)
+type unroll_inst =
+  | NoUnrolling
+  | UnrollLoops of big_int
+
 (** Types as they appear in source code, before validity checking and resolution. *)
 type type_expr = (* ?type_expr *)
     StructTypeExpr of loc * string option * field list option
@@ -758,6 +763,7 @@ and
       (string * type_expr list * (loc * string) list) option (* implemented function type, with function type type arguments and function type arguments *) *
       (asn * asn) option *  (* contract *)
       bool *  (* terminates *)
+      unroll_inst *
       (stmt list * loc (* Close brace *)) option *  (* body *)
       method_binding *  (* static or instance *)
       visibility
@@ -974,7 +980,7 @@ let stmt_fold_open f state s =
     List.fold_left f state ssf
   | BlockStmt (l, ds, ss, _, _) ->
     let process_decl state = function
-      Func (_, _, _, _, _, _, _, _, _, _, Some (ss, _), _, _) ->
+      Func (_, _, _, _, _, _, _, _, _, _, _, Some (ss, _), _, _) ->
       List.fold_left f state ss
     | _ -> state
     in

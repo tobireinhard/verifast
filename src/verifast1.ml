@@ -610,7 +610,7 @@ module VerifyProgram1(VerifyProgramArgs: VERIFY_PROGRAM_ARGS) = struct
                 | Some _ -> false
       end in
       iter (pn,ilist) (Class(l, abstract, fin, cn, meths', fds, cons', super, tparams, inames, [])::classes) lemmas rest
-    | Func(l,Lemma(_),tparams,rt,fn,arglist,nonghost_callers_only,ftype,contract,terminates,None,fb,vis) as elem ::rest->
+    | Func(l,Lemma(_),tparams,rt,fn,arglist,nonghost_callers_only,ftype,contract,terminates,unroll,None,fb,vis) as elem ::rest->
       iter (pn, ilist) classes (elem::lemmas) rest
     | _::rest -> 
       iter (pn, ilist) classes lemmas rest
@@ -2108,7 +2108,7 @@ module VerifyProgram1(VerifyProgramArgs: VERIFY_PROGRAM_ARGS) = struct
         | _ -> []
         in
         iter pni ((i, (l, tparams, List.rev ctormap, getters, setters, subtype))::imap) pfm fpm ds
-      | Func (l, Fixpoint, tparams, rto, g, ps, nonghost_callers_only, functype, contract, terminates, body_opt,Static,Public)::ds ->
+      | Func (l, Fixpoint, tparams, rto, g, ps, nonghost_callers_only, functype, contract, terminates, unroll, body_opt,Static,Public)::ds ->
         let g = full_name pn g in
         if List.mem_assoc g pfm || List.mem_assoc g purefuncmap0 then static_error l ("Duplicate pure function name: "^g) None;
         check_tparams l [] tparams;
@@ -2121,6 +2121,7 @@ module VerifyProgram1(VerifyProgramArgs: VERIFY_PROGRAM_ARGS) = struct
         if functype <> None then static_error l "Fixpoint functions cannot implement a function type." None;
         if contract <> None then static_error l "Fixpoint functions cannot have a contract." None;
         if terminates then static_error l "The 'terminates' clause is superfluous for fixpoint functions." None;
+        if unroll <> NoUnrolling then static_error l "The 'unroll' clause is superfluous for fixpoint functions." None;
         let pmap =
           let rec iter pmap ps =
             match ps with
@@ -3035,7 +3036,7 @@ module VerifyProgram1(VerifyProgramArgs: VERIFY_PROGRAM_ARGS) = struct
         begin fun (PackageDecl (_, pn, _, ds)) ->
           flatmap
             begin function
-              (Func (l, (Regular|Lemma(_)), tparams, rt, g, ps, nonghost_callers_only, ft, c, terminates, b,Static,_)) -> [full_name pn g]
+              (Func (l, (Regular|Lemma(_)), tparams, rt, g, ps, nonghost_callers_only, ft, c, terminates, unroll, b,Static,_)) -> [full_name pn g]
             | _ -> []
             end
             ds

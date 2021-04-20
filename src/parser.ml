@@ -106,7 +106,7 @@ type spec_clause = (* ?spec_clause *)
 | RequiresClause of asn
 | EnsuresClause of asn
 | TerminatesClause of loc
-| UnrollClause of loc * big_int
+| UnrollLoopsClause of loc * big_int
 
 let next_body_rank =
   let counter = ref 0 in
@@ -518,7 +518,7 @@ and
 | [< '(_, Kwd "_Noreturn"); v = parse_static_visibility; _ = parse_ignore_inline; t = parse_return_type; d = parse_func_rest Regular t v >] ->
   let ds = check_function_for_contract d in
   begin match ds with
-    [Func (l, k, tparams, t, g, ps, gc, ft, Some (pre, post), terminates, ss, static, v)] ->
+    [Func (l, k, tparams, t, g, ps, gc, ft, Some (pre, post), terminates, unroll, ss, static, v)] ->
     begin match pre, post with
       ExprAsn (_, False _), _ | False _, _ | _, False _ -> ()
     | _ -> raise (ParseException (l, "Function marked 'noreturn' must declare 'ensures false'."))
@@ -538,9 +538,9 @@ and check_for_contract: 'a. 'a option -> loc -> string -> (asn * asn -> 'a) -> '
 
 and check_function_for_contract d =
   match d with
-  | Func(l, k, tparams, t, g, ps, gc, ft, contract, terminates, ss, static, v) ->
+  | Func(l, k, tparams, t, g, ps, gc, ft, contract, terminates, unroll, ss, static, v) ->
     let contract = check_for_contract contract l "Function declaration should have a contract." (fun co -> co) in
-    [Func(l, k, tparams, t, g, ps, gc, ft, Some contract, terminates, ss, static, v)]
+    [Func(l, k, tparams, t, g, ps, gc, ft, Some contract, terminates, unroll, ss, static, v)]
   | _ -> [d]
 and
   parse_pure_decls = parser
@@ -635,20 +635,20 @@ and
       let gmeasure = g ^ "__measure" in
       let call g args = CallExpr (l, g, [], [], List.map (fun e -> LitPat e) args, Static) in
       [
-        Func (l, Fixpoint, tparams, Some rt, gdef, (PureFuncTypeExpr (l, List.map fst ps @ [rt]), g) :: ps, false, None, None, false, body, Static, Public);
+        Func (l, Fixpoint, tparams, Some rt, gdef, (PureFuncTypeExpr (l, List.map fst ps @ [rt]), g) :: ps, false, None, None, false, NoUnrolling, body, Static, Public);
         Inductive (l, iargs, tparams, [Ctor (l, iargs, List.map (fun (t, x) -> (x, t)) ps)]);
-        Func (l, Fixpoint, tparams, Some rt, g_uncurry, (PureFuncTypeExpr (l, [iargsType; rt]), g) :: ps, false, None, None, false,
+        Func (l, Fixpoint, tparams, Some rt, g_uncurry, (PureFuncTypeExpr (l, [iargsType; rt]), g) :: ps, false, None, None, false, NoUnrolling,
           Some ([ReturnStmt (l, Some (call g [call iargs (List.map (fun (t, x) -> Var (l, x)) ps)]))], l), Static, Public);
-        Func (l, Fixpoint, tparams, Some rt, gdef_curried, [PureFuncTypeExpr (l, [iargsType; rt]), g; iargsType, "__args"], false, None, None, false,
+        Func (l, Fixpoint, tparams, Some rt, gdef_curried, [PureFuncTypeExpr (l, [iargsType; rt]), g; iargsType, "__args"], false, None, None, false, NoUnrolling,
           Some ([SwitchStmt (l, Var (l, "__args"), [SwitchStmtClause (l, call iargs (List.map (fun (t, x) -> Var (l, x)) ps),
             [ReturnStmt (l, Some (call gdef ([ExprCallExpr (l, Var (l, g_uncurry), [Var (l, g)])] @ List.map (fun (t, x) -> Var (l, x)) ps)))])])], l), Static, Public);
-        Func (l, Fixpoint, tparams, Some (ManifestTypeExpr (l, intType)), gmeasure, [iargsType, "__args"], false, None, None, false,
+        Func (l, Fixpoint, tparams, Some (ManifestTypeExpr (l, intType)), gmeasure, [iargsType, "__args"], false, None, None, false, NoUnrolling,
           Some ([SwitchStmt (l, Var (l, "__args"), [SwitchStmtClause (l, call iargs (List.map (fun (t, x) -> Var (l, x)) ps),
             [ReturnStmt (l, Some measure)])])], l), Static, Public);
-        Func (l, Fixpoint, tparams, Some rt, g, ps, false, None, None, false, Some ([ReturnStmt (l, Some (call "fix" [Var (l, gdef_curried); Var (l, gmeasure); call iargs (List.map (fun (t, x) -> Var (l, x)) ps)]))], l), Static, Public);
+        Func (l, Fixpoint, tparams, Some rt, g, ps, false, None, None, false, NoUnrolling, Some ([ReturnStmt (l, Some (call "fix" [Var (l, gdef_curried); Var (l, gmeasure); call iargs (List.map (fun (t, x) -> Var (l, x)) ps)]))], l), Static, Public);
         Func (l, Lemma (kwd = "fixpoint_auto", None), tparams, None, g ^ "_def", ps, false, None,
           Some (Operation (l, Le, [IntLit (l, zero_big_int, true, false, NoLSuffix); measure]), Operation (l, Eq, [call g (List.map (fun (t, x) -> Var (l, x)) ps); bodyExpr])),
-          false,
+          false, NoUnrolling,
           Some ([
             IfStmt (l, Operation (l, Neq, [call g (List.map (fun (t, x) -> Var (l, x)) ps); bodyExpr]), [
               ExprStmt (call "fix_unfold" [Var (l, gdef_curried); Var (l, gmeasure); call iargs (List.map (fun (t, x) -> Var (l, x)) ps)]);
@@ -663,7 +663,7 @@ and
       ]
     | _ ->
       if kwd = "fixpoint_auto" then raise (ParseException (l, "Keyword 'fixpoint_auto' does not make sense here because this type of fixpoint definition is always unfolded automatically"));
-      [Func (l, Fixpoint, tparams, rt, g, ps, false, None, None, false, body, Static, Public)]
+      [Func (l, Fixpoint, tparams, rt, g, ps, false, None, None, false, NoUnrolling, body, Static, Public)]
     end
 and
   parse_action_decls = parser
@@ -722,12 +722,18 @@ and
       [<
         ps = parse_paramlist;
         f = parser
-          [< '(_, Kwd ";"); (nonghost_callers_only, ft, co, terminates, unroll) = parse_spec_clauses >] ->
-            (* TODO: Include 'unroll' in Func instance *)
-          Func (l, k, tparams, t, g, ps, nonghost_callers_only, ft, co, terminates, None, Static, v)
-        | [< (nonghost_callers_only, ft, co, terminates, unroll) = parse_spec_clauses; '(_, Kwd "{"); ss = parse_stmts; '(closeBraceLoc, Kwd "}") >] ->
-            (* TODO: Include 'unroll' in Func instance *)
-          Func (l, k, tparams, t, g, ps, nonghost_callers_only, ft, co, terminates, Some (ss, closeBraceLoc), Static, v)
+          [< '(_, Kwd ";"); (nonghost_callers_only, ft, co, terminates, unroll_loops) = parse_spec_clauses >] ->
+          let unroll = match unroll_loops with
+          | None -> NoUnrolling
+          | Some depth -> UnrollLoops depth
+          in
+          Func (l, k, tparams, t, g, ps, nonghost_callers_only, ft, co, terminates, unroll, None, Static, v)
+        | [< (nonghost_callers_only, ft, co, terminates, unroll_loops) = parse_spec_clauses; '(_, Kwd "{"); ss = parse_stmts; '(closeBraceLoc, Kwd "}") >] ->
+            let unroll = match unroll_loops with
+            | None -> NoUnrolling
+            | Some depth -> UnrollLoops depth
+            in
+          Func (l, k, tparams, t, g, ps, nonghost_callers_only, ft, co, terminates, unroll, Some (ss, closeBraceLoc), Static, v)
       >] -> f
     | [<
         () = (fun s -> if k = Regular && tparams = [] && t <> None then () else raise Stream.Failure);
@@ -936,7 +942,7 @@ and
 | [< '(_, Kwd ":"); '(li, Ident ft); targs = parse_type_args li; ftargs = parse_functypeclause_args >] -> FuncTypeClause (ft, targs, ftargs)
 | [< '(_, Kwd "requires"); p = parse_asn; '(_, Kwd ";") >] -> RequiresClause p
 | [< '(_, Kwd "ensures"); p = parse_asn; '(_, Kwd ";") >] -> EnsuresClause p
-| [< '(l, Kwd "unroll"); '(_, Int (depth, _, _, _)); '(_, Kwd ";") >] -> UnrollClause (l, depth)
+| [< '(l, Kwd "unroll"); '(_, Int (depth, _, _, _)); '(_, Kwd ";") >] -> UnrollLoopsClause (l, depth)
 and
   parse_spec_clause = parser
   [< c = peek_in_ghost_range (parser [< c = parse_pure_spec_clause; '(_, Kwd "@*/") >] -> c) >] -> c
@@ -950,15 +956,15 @@ and
     let ft = (parser [< 'FuncTypeClause (ft, fttargs, ftargs) >] -> out_count := !out_count + 1; Some (ft, fttargs, ftargs) | [< >] -> None) clause_stream in
     let pre_post = (parser [< 'RequiresClause pre; 'EnsuresClause post; >] -> out_count := !out_count + 2; Some (pre, post) | [< >] -> None) clause_stream in
     let terminates = (parser [< '(TerminatesClause l) >] -> out_count := !out_count + 1; true | [< >] -> false) clause_stream in
-    let unroll = (parser [< 'UnrollClause (l, depth) >] -> out_count := !out_count + 1; Some depth | [< >] -> None) clause_stream in
+    let unroll_loops = (parser [< 'UnrollLoopsClause (l, depth) >] -> out_count := !out_count + 1; Some depth | [< >] -> None) clause_stream in
     if !in_count > !out_count then raise (Stream.Error "The number, kind, or order of specification clauses is incorrect. Expected: nonghost_callers_only clause (optional), function type clause (optional), contract (optional), terminates clause (optional), unroll clause (optional).");
-    (nonghost_callers_only, ft, pre_post, terminates, unroll)
+    (nonghost_callers_only, ft, pre_post, terminates, unroll_loops)
 and
   parse_spec = parser
-    [< (nonghost_callers_only, ft, pre_post, terminates, unroll) = parse_spec_clauses >] ->
+    [< (nonghost_callers_only, ft, pre_post, terminates, unroll_loops) = parse_spec_clauses >] ->
     match (nonghost_callers_only, ft, pre_post) with
       (false, None, None) -> raise Stream.Failure
-    | (false, None, (Some (pre, post))) -> (pre, post, terminates) (* TODO: include unroll clause in contract*)
+    | (false, None, (Some (pre, post))) -> (pre, post, terminates) (* TODO: include unroll_loops clause in contract? *)
     | _ -> raise (Stream.Error "Incorrect kind, number, or order of specification clauses. Expected: requires clause, ensures clause, terminates clause (optional), unroll clause (optional).")
 and
   parse_block = parser

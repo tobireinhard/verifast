@@ -42,13 +42,13 @@ and unroll_loops_in_stmt_list (depth : int) (sts : stmt list) : stmt list =
 and unroll_loops_in_decl (depth : int) (decl : decl) : decl = 
   match decl with
   | Func (l, func_kind', type_params', ret_type', name', params', 
-          nonghost_callers_only', impl_fct_type', contract', terminates',
+          nonghost_callers_only', impl_fct_type', contract', terminates', unroll',
           (Some (body, bodyLoc)), 
           method_binding', visibility') 
       ->  let unrolledBody = unroll_loops_in_stmt_list depth body
           in
           Func (l, func_kind', type_params', ret_type', name', params', 
-                nonghost_callers_only', impl_fct_type', contract', terminates',
+                nonghost_callers_only', impl_fct_type', contract', terminates', unroll',
                 (Some (unrolledBody, bodyLoc)), 
                 method_binding', visibility') 
   | _ -> decl
