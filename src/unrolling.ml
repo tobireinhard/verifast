@@ -5,7 +5,7 @@ let maxDepthStr = string_of_int maxDepth
 
 
 let rec unroll_loops_in_stmt (depth : int) (st : stmt) : stmt =
-  if depth <= 0 then (print_string "\tdepth = 0\n"; st)
+  if depth <= 0 then st
   else
   (
     match st with
