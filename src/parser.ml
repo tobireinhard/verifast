@@ -106,6 +106,7 @@ type spec_clause = (* ?spec_clause *)
 | RequiresClause of asn
 | EnsuresClause of asn
 | TerminatesClause of loc
+| UnrollClause of loc * big_int
 
 let next_body_rank =
   let counter = ref 0 in
@@ -721,9 +722,11 @@ and
       [<
         ps = parse_paramlist;
         f = parser
-          [< '(_, Kwd ";"); (nonghost_callers_only, ft, co, terminates) = parse_spec_clauses >] ->
+          [< '(_, Kwd ";"); (nonghost_callers_only, ft, co, terminates, unroll) = parse_spec_clauses >] ->
+            (* TODO: Include 'unroll' in Func instance *)
           Func (l, k, tparams, t, g, ps, nonghost_callers_only, ft, co, terminates, None, Static, v)
-        | [< (nonghost_callers_only, ft, co, terminates) = parse_spec_clauses; '(_, Kwd "{"); ss = parse_stmts; '(closeBraceLoc, Kwd "}") >] ->
+        | [< (nonghost_callers_only, ft, co, terminates, unroll) = parse_spec_clauses; '(_, Kwd "{"); ss = parse_stmts; '(closeBraceLoc, Kwd "}") >] ->
+            (* TODO: Include 'unroll' in Func instance *)
           Func (l, k, tparams, t, g, ps, nonghost_callers_only, ft, co, terminates, Some (ss, closeBraceLoc), Static, v)
       >] -> f
     | [<
@@ -933,6 +936,7 @@ and
 | [< '(_, Kwd ":"); '(li, Ident ft); targs = parse_type_args li; ftargs = parse_functypeclause_args >] -> FuncTypeClause (ft, targs, ftargs)
 | [< '(_, Kwd "requires"); p = parse_asn; '(_, Kwd ";") >] -> RequiresClause p
 | [< '(_, Kwd "ensures"); p = parse_asn; '(_, Kwd ";") >] -> EnsuresClause p
+| [< '(l, Kwd "unroll"); '(_, Int (depth, _, _, _)); '(_, Kwd ";") >] -> UnrollClause (l, depth)
 and
   parse_spec_clause = parser
   [< c = peek_in_ghost_range (parser [< c = parse_pure_spec_clause; '(_, Kwd "@*/") >] -> c) >] -> c
@@ -946,15 +950,16 @@ and
     let ft = (parser [< 'FuncTypeClause (ft, fttargs, ftargs) >] -> out_count := !out_count + 1; Some (ft, fttargs, ftargs) | [< >] -> None) clause_stream in
     let pre_post = (parser [< 'RequiresClause pre; 'EnsuresClause post; >] -> out_count := !out_count + 2; Some (pre, post) | [< >] -> None) clause_stream in
     let terminates = (parser [< '(TerminatesClause l) >] -> out_count := !out_count + 1; true | [< >] -> false) clause_stream in
-    if !in_count > !out_count then raise (Stream.Error "The number, kind, or order of specification clauses is incorrect. Expected: nonghost_callers_only clause (optional), function type clause (optional), contract (optional), terminates clause (optional).");
-    (nonghost_callers_only, ft, pre_post, terminates)
+    let unroll = (parser [< 'UnrollClause (l, depth) >] -> out_count := !out_count + 1; Some depth | [< >] -> None) clause_stream in
+    if !in_count > !out_count then raise (Stream.Error "The number, kind, or order of specification clauses is incorrect. Expected: nonghost_callers_only clause (optional), function type clause (optional), contract (optional), terminates clause (optional), unroll clause (optional).");
+    (nonghost_callers_only, ft, pre_post, terminates, unroll)
 and
   parse_spec = parser
-    [< (nonghost_callers_only, ft, pre_post, terminates) = parse_spec_clauses >] ->
+    [< (nonghost_callers_only, ft, pre_post, terminates, unroll) = parse_spec_clauses >] ->
     match (nonghost_callers_only, ft, pre_post) with
       (false, None, None) -> raise Stream.Failure
-    | (false, None, (Some (pre, post))) -> (pre, post, terminates)
-    | _ -> raise (Stream.Error "Incorrect kind, number, or order of specification clauses. Expected: requires clause, ensures clause, terminates clause (optional).")
+    | (false, None, (Some (pre, post))) -> (pre, post, terminates) (* TODO: include unroll clause in contract*)
+    | _ -> raise (Stream.Error "Incorrect kind, number, or order of specification clauses. Expected: requires clause, ensures clause, terminates clause (optional), unroll clause (optional).")
 and
   parse_block = parser
   [< '(l, Kwd "{"); ss = parse_stmts; '(_, Kwd "}") >] -> ss
