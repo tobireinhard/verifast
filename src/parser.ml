@@ -28,7 +28,8 @@ let ghost_keywords = [
   "produce_lemma_function_pointer_chunk"; "duplicate_lemma_function_pointer_chunk"; "produce_function_pointer_chunk";
   "producing_box_predicate"; "producing_handle_predicate"; "producing_fresh_handle_predicate"; "box"; "handle"; "any"; "split_fraction"; "by"; "merge_fractions";
   "unloadable_module"; "decreases"; "forall_"; "import_module"; "require_module"; ".."; "extends"; "permbased";
-  "terminates"; "abstract_type"; "fixpoint_auto"
+  "terminates"; "abstract_type"; "fixpoint_auto";
+  "unroll"
 ]
 
 let c_keywords = [
