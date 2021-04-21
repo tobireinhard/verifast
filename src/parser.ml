@@ -953,7 +953,7 @@ and
 | [< '(_, Kwd ":"); '(li, Ident ft); targs = parse_type_args li; ftargs = parse_functypeclause_args >] -> FuncTypeClause (ft, targs, ftargs)
 | [< '(_, Kwd "requires"); p = parse_asn; '(_, Kwd ";") >] -> RequiresClause p
 | [< '(_, Kwd "ensures"); p = parse_asn; '(_, Kwd ";") >] -> EnsuresClause p
-| [< '(l, Kwd "unroll"); '(_, Int (depth, _, _, _)); '(_, Kwd ";") >] -> UnrollLoopsClause (l, depth) (*TODO: Fix*) (* TODO: Why does a negative depth lead to a parse error?*)
+| [< '(l, Kwd "unroll"); '(_, Int (depth, _, _, _)); '(_, Kwd ";") >] -> UnrollLoopsClause (l, depth) (* TODO: Why does a negative depth lead to a parse error?*)
 and
   parse_spec_clause = parser
   [< c = peek_in_ghost_range (parser [< c = parse_pure_spec_clause; '(_, Kwd "@*/") >] -> c) >] -> c
@@ -975,7 +975,7 @@ and
     [< (nonghost_callers_only, ft, pre_post, terminates, unroll_loops) = parse_spec_clauses >] ->
     match (nonghost_callers_only, ft, pre_post) with
       (false, None, None) -> raise Stream.Failure
-    | (false, None, (Some (pre, post))) -> (pre, post, terminates) (* TODO: include unroll_loops clause in contract? *)
+    | (false, None, (Some (pre, post))) -> (pre, post, terminates)
     | _ -> raise (Stream.Error "Incorrect kind, number, or order of specification clauses. Expected: requires clause, ensures clause, terminates clause (optional), unroll clause (optional).")
 and
   parse_block = parser
