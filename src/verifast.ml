@@ -3091,7 +3091,7 @@ module VerifyProgram(VerifyProgramArgs: VERIFY_PROGRAM_ARGS) = struct
             let (headersPlain, dsPlain) = 
               parse_c_file path reportRange reportShouldFail options.option_verbose options.option_include_paths options.option_define_macros options.option_enforce_annotations data_model
             in 
-            let dsUnrolled = unroll_loops_in_package_list Unrolling.maxDepth dsPlain
+            let dsUnrolled = unroll_loops_in_package_list dsPlain
             in
             (headersPlain, dsUnrolled)
     in
