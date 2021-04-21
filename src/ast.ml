@@ -236,7 +236,7 @@ type int_literal_lsuffix = NoLSuffix | LSuffix | LLSuffix
 (** Unroll instructions **)
 type unroll_inst =
   | NoUnrolling
-  | UnrollLoops of big_int
+  | UnrollLoops of int
 
 (** Types as they appear in source code, before validity checking and resolution. *)
 type type_expr = (* ?type_expr *)

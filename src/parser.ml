@@ -108,6 +108,23 @@ type spec_clause = (* ?spec_clause *)
 | TerminatesClause of loc
 | UnrollLoopsClause of loc * big_int
 
+let unroll_loops_opt_to_unroll_inst (unroll_loops : big_int option) : unroll_inst =
+  match unroll_loops with
+    | None -> NoUnrolling
+    | Some depth ->  
+        if lt_big_int depth zero_big_int
+          then (
+            raise (Stream.Error ("Invalid loop unrolling depth " 
+                                      ^ (string_of_big_int depth)
+                                      ^ ". Must be positive."))
+          )
+          else if is_int_big_int depth
+            then UnrollLoops (int_of_big_int depth)
+            else raise (Stream.Error ("Invalid loop unrolling depth " 
+                                      ^ (string_of_big_int depth) ^ 
+                                      ". Exceeds maximum integer value "
+                                      ^ (string_of_int max_int) ^ "."))
+
 let next_body_rank =
   let counter = ref 0 in
   fun () -> incr counter; !counter
@@ -723,17 +740,11 @@ and
         ps = parse_paramlist;
         f = parser
           [< '(_, Kwd ";"); (nonghost_callers_only, ft, co, terminates, unroll_loops) = parse_spec_clauses >] ->
-          let unroll = match unroll_loops with
-          | None -> NoUnrolling
-          | Some depth -> UnrollLoops depth
-          in
-          Func (l, k, tparams, t, g, ps, nonghost_callers_only, ft, co, terminates, unroll, None, Static, v)
+            let unroll = unroll_loops_opt_to_unroll_inst unroll_loops in
+              Func (l, k, tparams, t, g, ps, nonghost_callers_only, ft, co, terminates, unroll, None, Static, v)
         | [< (nonghost_callers_only, ft, co, terminates, unroll_loops) = parse_spec_clauses; '(_, Kwd "{"); ss = parse_stmts; '(closeBraceLoc, Kwd "}") >] ->
-            let unroll = match unroll_loops with
-            | None -> NoUnrolling
-            | Some depth -> UnrollLoops depth
-            in
-          Func (l, k, tparams, t, g, ps, nonghost_callers_only, ft, co, terminates, unroll, Some (ss, closeBraceLoc), Static, v)
+            let unroll = unroll_loops_opt_to_unroll_inst unroll_loops in
+              Func (l, k, tparams, t, g, ps, nonghost_callers_only, ft, co, terminates, unroll, Some (ss, closeBraceLoc), Static, v)
       >] -> f
     | [<
         () = (fun s -> if k = Regular && tparams = [] && t <> None then () else raise Stream.Failure);
@@ -942,7 +953,7 @@ and
 | [< '(_, Kwd ":"); '(li, Ident ft); targs = parse_type_args li; ftargs = parse_functypeclause_args >] -> FuncTypeClause (ft, targs, ftargs)
 | [< '(_, Kwd "requires"); p = parse_asn; '(_, Kwd ";") >] -> RequiresClause p
 | [< '(_, Kwd "ensures"); p = parse_asn; '(_, Kwd ";") >] -> EnsuresClause p
-| [< '(l, Kwd "unroll"); '(_, Int (depth, _, _, _)); '(_, Kwd ";") >] -> UnrollLoopsClause (l, depth)
+| [< '(l, Kwd "unroll"); '(_, Int (depth, _, _, _)); '(_, Kwd ";") >] -> UnrollLoopsClause (l, depth) (*TODO: Fix*) (* TODO: Why does a negative depth lead to a parse error?*)
 and
   parse_spec_clause = parser
   [< c = peek_in_ghost_range (parser [< c = parse_pure_spec_clause; '(_, Kwd "@*/") >] -> c) >] -> c
