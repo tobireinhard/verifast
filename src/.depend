@@ -65,7 +65,8 @@ smtlibprover.cmx : util.cmx smtlib.cmx proverapi.cmx
 stats.cmx : util.cmx linux/Stopwatch.cmx linux/Perf.cmx ast.cmx
 stopwatch_test.cmx : linux/Stopwatch.cmx
 tabhunter.cmx :
-unrolling.cmx :
+unrolling.cmx : ast.cmx unrolling.cmi
+unrolling.cmi : ast.cmx
 util.cmx : proverapi.cmx
 verifast.cmx : verify_expr.cmx verifast1.cmx verifast0.cmx util.cmx \
     unrolling.cmx linux/Stopwatch.cmx stats.cmx proverapi.cmx linux/Perf.cmx \
